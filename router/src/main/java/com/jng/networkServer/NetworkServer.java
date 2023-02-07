@@ -6,16 +6,21 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
 import com.jng.callables.CallableFactory;
+import com.jng.router.RouterState;
 
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 
 public class NetworkServer {
+
+	// network
 	private String _host;
 	private int _port;
 	private ServerSocketChannel _serverChannel;
@@ -23,10 +28,19 @@ public class NetworkServer {
 	private boolean _isRunning;
 	private Map<SocketChannel, byte[]> _pendingToWrite = new HashMap<>();
 	private final int TIMEOUT = 500;
-
-	// TODO implement executor and routerstate and write first then read
+	private String _ackMessage;
+	private ArrayList<SocketChannel> _connectedClients;
+	
+	// business logic
+	private RouterState _routerState;
 	private CallableFactory _callableFactory;
 	private Callable<Integer> _handleConnect;
+	// TODO implement signal handling - scrapped, no standard API available
+
+
+	public void setAckMessage(String _ackMessage) {
+		this._ackMessage = _ackMessage;
+	}
 
 	public void setHandleConnect(Callable<Integer> _handleConnect) {
 		this._handleConnect = _handleConnect;
@@ -46,7 +60,7 @@ public class NetworkServer {
 			while (keys.hasNext()) {
 				SelectionKey key = keys.next();
 
-				// remvoe fd from set??
+				// remvoe fd from set
 				keys.remove();
 
 				// check for invalid keys - client close conn
@@ -56,14 +70,20 @@ public class NetworkServer {
 				if (key.isAcceptable())
 				{
 					// accept new connection
-					System.out.println("new connection accepted");
 					SocketChannel clientSocket = _serverChannel.accept();
 					
 					// set client socket to non block mode
 					clientSocket.configureBlocking(false);
 
-					// register client to fd set for read
-					clientSocket.register(_selector, SelectionKey.OP_READ);
+					// send ack message to client
+					byte[] arr = _ackMessage.getBytes(StandardCharsets.UTF_8);
+					_pendingToWrite.put(clientSocket, arr);
+
+					// register client to fd set for write
+					clientSocket.register(_selector, SelectionKey.OP_WRITE);
+
+					// add client socket to connected clients
+					_connectedClients.add(clientSocket);
 
 					// run callables
 					_handleConnect.call();
@@ -88,11 +108,16 @@ public class NetworkServer {
 						e.printStackTrace();
 						key.cancel();
 						clientSocket.close();
+						_serverChannel.close();
 						return;
 					}
 
 					if (read == -1) {
 						System.out.println("Client disconnect");
+						
+						// remove from connected clients
+						_connectedClients.remove(clientSocket);
+
 						clientSocket.close();
 						key.cancel();
 						continue;
@@ -156,13 +181,16 @@ public class NetworkServer {
 
 	}
 
-	public NetworkServer(String host, int port) throws IOException
+	public NetworkServer(String host, int port, RouterState routerstate) throws IOException
 	{
 		_host = host;
 		_port = port;
 		_isRunning = true;
+		_routerState = routerstate;
 		_callableFactory = new CallableFactory();
 		_handleConnect = _callableFactory.createDefaultCallable();
+		_ackMessage = "";
+		_connectedClients = new ArrayList<SocketChannel>();
 		_setup();
 	}
 }
