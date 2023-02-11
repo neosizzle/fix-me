@@ -6,6 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 import com.jng.transactions.Transaction;
 
@@ -28,7 +29,97 @@ public class Database {
 		}
 		return -1;
 	}
+
+	private Transaction _getTransactionFromRs(ResultSet rs)
+	{
+		try {
+			int id = rs.getInt("id");
+			int toId = rs.getInt("toId");
+			int fromId = rs.getInt("fromId");
+			String rawMsg = rs.getString("rawMsg");
+			boolean isResponse = rs.getInt("isResponse") != 0;
+			boolean isConfirmed = rs.getInt("isConfirmed") != 0;
+			int checksum = rs.getInt("checksum");
+			Transaction res = new Transaction(toId, fromId, rawMsg, isResponse, isConfirmed, checksum);
+			res.setId(id);
+			return res;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(1);
+			return null;
+		}
+	}
+
+	// might not need
+	// get all pending transactions from db
+	public ArrayList<Transaction> getPendingTransactions() throws SQLException
+	{
+		ArrayList<Transaction> res = new ArrayList<Transaction>();
+		String query = "SELECT * FROM TRANSACTIONS WHERE isConfirmed = 0";
+
+		ResultSet rs = _statement.executeQuery(query);
+		while (rs.next()) {
+			res.add(_getTransactionFromRs(rs));
+		}
+
+		return res;
+	}
 	
+	// add transaction to db
+	public int addTransactionToDb(Transaction transaction) throws SQLException
+	{
+		String query = "INSERT INTO TRANSACTIONS (id, to_id, from_id, rawMsg, isResponse, isConfirmed, checksum) VALUES (?, ?, ?, ?, ?, ?, ?)";
+		
+		PreparedStatement stmt = this._connection.prepareStatement(query);
+		int id = _getMaxId("TRANSACTIONS") + 1;
+		stmt.setInt(1, id);
+		stmt.setInt(2, transaction.getToId());
+		stmt.setInt(3, transaction.getFromId());
+		stmt.setString(4, transaction.getRawMsg());
+		stmt.setInt(5, transaction.getIsResponse() ? 1 : 0);
+		stmt.setInt(6, transaction.getIsConfirmed()? 1 : 0);
+		stmt.setInt(7, transaction.getChecksum());
+
+		stmt.executeUpdate();
+
+		return id;
+	}
+
+	// mark a transaction as complete
+	public void completeTransaction(Transaction transaction) throws SQLException
+	{
+		int id = transaction.getId();
+		if (id == -1) return;
+
+		String query = "UPDATE TRANSACTIONS SET isCompleted = 1 WHERE id = " + id;
+		_statement.executeUpdate(query);
+
+	}
+
+	// delete a transaction
+	public void deleteTransaction(Transaction transaction) throws SQLException
+	{
+		int id = transaction.getId();
+		if (id == -1) return;
+
+		String query = "DELETE FROM TRANSACTIONS WHERE id = " + id;
+		_statement.executeUpdate(query);
+	}
+
+	// get transaction by id
+	public Transaction getTransactionById(int id) throws SQLException
+	{
+		Transaction res;
+		String query = "SELECT * FROM TRANSACTIONS WHERE isConfirmed = 0";
+
+		ResultSet rs = _statement.executeQuery(query);
+		while (rs.next()) {
+			res = _getTransactionFromRs(rs);
+			return res;
+		}
+
+		return null;
+	}
 
 	private void _initTables()
 	{
@@ -39,7 +130,8 @@ public class Database {
 		" from_id  INT  NOT NULL, " + 
 		" rawMsg VARCHAR(100) NOT NULL, "+
 		" isResponse  INT  NOT NULL, " + 
-		" confirmed  INT  NOT NULL, " + 
+		" isConfirmed  INT  NOT NULL, " + 
+		" checksum  INT  NOT NULL, " + 
 		" created_at  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL)" ; 
 
 		try {
@@ -54,31 +146,6 @@ public class Database {
 			}
 			System.exit(1);
 		}
-	}
-
-	public int addTransaction(Transaction transaction)
-	{
-		String query = "INSERT INTO TRANSACTIONS (id, to_id, from_id, rawMsg, isResponse, confirmed) VALUES (?, ?, ?, ?, ?, ?)";
-
-		try {
-			PreparedStatement stmt = this._connection.prepareStatement(query);
-			int id = _getMaxId("TRANSACTIONS") + 1;
-
-
-			stmt.setInt(1, id);
-			stmt.setInt(2, transaction.getToId());
-			stmt.setInt(3, transaction.getFromId());
-			stmt.setString(4, transaction.getRawMsg());
-			stmt.setInt(5, transaction.getIsResponse() ? 1 : 0);
-			stmt.setInt(6, 0);
-
-			stmt.executeUpdate();
-			return id;
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return -1;
 	}
 
 	public Database()

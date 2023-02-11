@@ -12,7 +12,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import javax.swing.Icon;
+
 import com.jng.callables.CallableFactory;
+import com.jng.callables.IConnectCallable;
+import com.jng.callables.IReadCallable;
+import com.jng.callables.IWriteCallable;
 import com.jng.router.RouterState;
 
 import java.nio.channels.SocketChannel;
@@ -26,24 +31,29 @@ public class NetworkServer {
 	private ServerSocketChannel _serverChannel;
 	private Selector _selector;
 	private boolean _isRunning;
-	private Map<SocketChannel, byte[]> _pendingToWrite = new HashMap<>();
+	// private Map<SocketChannel, byte[]> _pendingToWrite = new HashMap<SocketChannel, byte[]>();
 	private final int TIMEOUT = 500;
-	private String _ackMessage;
 	private ArrayList<SocketChannel> _connectedClients;
 	
 	// business logic
 	private RouterState _routerState;
 	private CallableFactory _callableFactory;
-	private Callable<Integer> _handleConnect;
+	private IConnectCallable _handleConnect;
+	private IReadCallable _handleRead;
+	private IWriteCallable _handleWrite;
 	// TODO implement signal handling - scrapped, no standard API available
 
 
-	public void setAckMessage(String _ackMessage) {
-		this._ackMessage = _ackMessage;
+	public void setHandleConnect(IConnectCallable _handleConnect) {
+		this._handleConnect = _handleConnect;
 	}
 
-	public void setHandleConnect(Callable<Integer> _handleConnect) {
-		this._handleConnect = _handleConnect;
+	public void setHandleRead(IReadCallable _handleRead) {
+		this._handleRead = _handleRead;
+	}
+
+	public void setHandleWrite(IWriteCallable _handleWrite) {
+		this._handleWrite = _handleWrite;
 	}
 
 	public void start() throws Exception
@@ -75,10 +85,6 @@ public class NetworkServer {
 					// set client socket to non block mode
 					clientSocket.configureBlocking(false);
 
-					// send ack message to client
-					byte[] arr = _ackMessage.getBytes(StandardCharsets.UTF_8);
-					_pendingToWrite.put(clientSocket, arr);
-
 					// register client to fd set for write
 					clientSocket.register(_selector, SelectionKey.OP_WRITE);
 
@@ -86,6 +92,7 @@ public class NetworkServer {
 					_connectedClients.add(clientSocket);
 
 					// run callables
+					_handleConnect.setNewClient(clientSocket);
 					_handleConnect.call();
 
 					continue ;
@@ -104,6 +111,7 @@ public class NetworkServer {
 					int read;
 					try {
 						read = clientSocket.read(readBuffer);
+
 					} catch (IOException e) {
 						e.printStackTrace();
 						key.cancel();
@@ -127,10 +135,13 @@ public class NetworkServer {
 					byte[] arr = new byte[read];
 					readBuffer.flip();
 					readBuffer.get(arr);
-					_pendingToWrite.put(clientSocket,arr);
+					// _pendingToWrite.put(clientSocket,arr);
 
-					// register client socket for write
-					clientSocket.register(_selector, SelectionKey.OP_WRITE);
+					_handleRead.setClientSock(clientSocket);
+					_handleRead.setReadStr(new String(arr, "ASCII"));
+					_handleRead.setSelector(_selector);
+					_handleRead.call();
+					
 
 					continue ;
 				}
@@ -141,20 +152,10 @@ public class NetworkServer {
 					// get socket
 					SocketChannel clientSocket = (SocketChannel) key.channel();
 
-					// get message from hashmap
-					byte[] message = _pendingToWrite.get(clientSocket);
-
-					if (message == null)
-						continue;
-					
-					// remove pending message
-					_pendingToWrite.remove(clientSocket);
-
-					// send message to socket
-					clientSocket.write(ByteBuffer.wrap(message));
-
-					// register client socket to read again
-					clientSocket.register(_selector, SelectionKey.OP_READ);
+					// call handler
+					_handleWrite.setClientSock(clientSocket);
+					_handleWrite.setSelector(_selector);
+					_handleWrite.call();
 
 				}
 			}
@@ -188,8 +189,9 @@ public class NetworkServer {
 		_isRunning = true;
 		_routerState = routerstate;
 		_callableFactory = new CallableFactory();
-		_handleConnect = _callableFactory.createDefaultCallable();
-		_ackMessage = "";
+		_handleConnect = _callableFactory.createDefaultConenctCallable();
+		_handleRead = _callableFactory.createDefaultReadCallable();
+		_handleWrite = _callableFactory.createDefaultWriteCallable();
 		_connectedClients = new ArrayList<SocketChannel>();
 		_setup();
 	}

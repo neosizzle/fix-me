@@ -1,12 +1,14 @@
 package com.jng.router;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.jng.callables.CallableFactory;
+import com.jng.callables.IConnectCallable;
+import com.jng.callables.IReadCallable;
+import com.jng.callables.IWriteCallable;
 import com.jng.database.Database;
 import com.jng.networkServer.NetworkServer;
-import com.jng.transactions.BusinessTransaction;
 
 public class Router {
 	private Database _db;
@@ -15,30 +17,28 @@ public class Router {
 	private NetworkServer _brokerServer;
 	private NetworkServer _marketServer;
 
-	/** Handlers */
-	private Callable<Integer> _handleConnection;
-	int numConnections = 0;
+	private CallableFactory _callableFactory;
 
-	private void _generateHandlers()
+	/** Handlers Broker */
+	private IConnectCallable _handleConnectionBroker;
+	private IReadCallable _handleReadBroker;
+	private IWriteCallable _handleWriteBroker;
+
+	/** Handlers Market */
+	
+
+	private void _generateMarketHandlers()
 	{
-		_handleConnection = new Callable<Integer>() {
-			// Method of this Class
-			public Integer call() throws Exception
-			{
-				numConnections++;
-				System.out.println("curr numConnections: " + numConnections);
-				_db.addTransaction(new BusinessTransaction(
-					"instru",
-					43.21 ,
-					"market", 
-					2.34,
-					1,
-					2,
-					"rawnmsg",
-					1234));
-				return 0;
-			}
-		};
+
+	}
+
+	private void _generateBrokerHandlers()
+	{
+
+		_handleConnectionBroker = _callableFactory.generateBrokerConenctHandler();
+		_handleReadBroker = _callableFactory.generateBrokerReadHandler();
+		_handleWriteBroker = _callableFactory.generateBrokerWriteHandler();
+
 	}
 
 	/**Setup- connect to db and init sockets */
@@ -48,24 +48,22 @@ public class Router {
 			_db = new Database();
 			_brokerServer = new NetworkServer("127.0.0.1", 5000, _routerState);
 			_marketServer = new NetworkServer("127.0.0.1", 5001, _routerState);
-			_brokerServer.setAckMessage("Broker server accepted connection\n");
-			_marketServer.setAckMessage("Market server accepted connection\n");
 
-			_generateHandlers();
-			_brokerServer.setHandleConnect(_handleConnection);
-			_marketServer.setHandleConnect(_handleConnection);
-			_restore();
+			_routerState.setDb(_db);
+			_callableFactory.setRouterStateRef(_routerState);
+
+			_generateBrokerHandlers();
+			_brokerServer.setHandleConnect(_handleConnectionBroker);
+			_marketServer.setHandleConnect(_handleConnectionBroker);
+			_brokerServer.setHandleRead(_handleReadBroker);
+			_marketServer.setHandleRead(_handleReadBroker);
+			_brokerServer.setHandleWrite(_handleWriteBroker);
+			_marketServer.setHandleWrite(_handleWriteBroker);
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
 
-	}
-
-	/** Restore all pending transactions after startup */
-	private void _restore()
-	{
-		System.out.println("Router._restore()");
 	}
 
 	/**Commences listening */
@@ -110,5 +108,6 @@ public class Router {
 		_db = null;
 		_brokerServer = null;
 		_routerState = new RouterState();
+		_callableFactory = new CallableFactory();
 	}
 }

@@ -41,7 +41,7 @@ public class BusinessTransaction extends Transaction {
 		int checksum
 		)
 	{
-		super(toId, fromId, rawMsg, false, checksum);
+		super(toId, fromId, rawMsg, false, false, checksum);
 		this._instrument = instrument;
 		this._quantity = quantity;
 		this._market = market;

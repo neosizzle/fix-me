@@ -18,7 +18,7 @@ public class ResponseTransaction extends Transaction {
 		int checksum
 	)
 	{
-		super(toId, fromId, rawMsg, true, checksum);
+		super(toId, fromId, rawMsg, true, false, checksum);
 		this._status = status;
 
 	}

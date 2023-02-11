@@ -1,0 +1,1 @@
+sed 's/\x7c/\x01/g' testmsg > testmsg2 # replace all pipe with SOH

@@ -1,6 +1,7 @@
 package com.jng.transactions;
 
 public class Transaction {
+	protected int _id;
 	protected int _toId;
 	protected int _fromId;
 	protected String _rawMsg;
@@ -8,6 +9,12 @@ public class Transaction {
 	protected boolean _isResponse;
 	protected int _checksum;
 
+	public int getId() {
+		return _id;
+	}
+	public void setId(int _id) {
+		this._id = _id;
+	}
 	public int getToId() {
 		return _toId;
 	}
@@ -38,18 +45,28 @@ public class Transaction {
 	public void setIsResponse(boolean _isRes) {
 		this._isResponse = _isRes;
 	}
+	public boolean getIsConfirmed()
+	{
+		return this._isConfirmed;
+	}
+	public void setIsConfirmed(boolean isconfirmed)
+	{
+		this._isConfirmed = isconfirmed;
+	}
 
 	public boolean validateChecksum()
 	{
 		return true;
 	}
 
-	public Transaction(int toId, int fromId, String rawMsg, boolean isResponse, int checksum)
+	public Transaction(int toId, int fromId, String rawMsg, boolean isResponse, boolean isConfirmed, int checksum)
 	{
+		this._id = -1;
 		this._fromId = fromId;
 		this._toId = toId;
 		this._rawMsg = rawMsg;
 		this._isResponse = isResponse;
+		this._isConfirmed = isConfirmed;
 		this._checksum = checksum;
 
 	}
