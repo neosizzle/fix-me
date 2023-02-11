@@ -19,6 +19,7 @@ import com.jng.callables.IConnectCallable;
 import com.jng.callables.IReadCallable;
 import com.jng.callables.IWriteCallable;
 import com.jng.router.RouterState;
+import com.jng.utils.BufferUtils;
 
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
@@ -43,6 +44,7 @@ public class NetworkServer {
 	private IWriteCallable _handleWrite;
 	// TODO implement signal handling - scrapped, no standard API available
 
+	// TODO make disconnect handle
 
 	public void setHandleConnect(IConnectCallable _handleConnect) {
 		this._handleConnect = _handleConnect;
@@ -105,7 +107,7 @@ public class NetworkServer {
 					SocketChannel clientSocket = (SocketChannel) key.channel();
 					
 					// read data
-					ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+					ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 1000);
 					readBuffer.clear();
 
 					int read;
@@ -135,10 +137,10 @@ public class NetworkServer {
 					byte[] arr = new byte[read];
 					readBuffer.flip();
 					readBuffer.get(arr);
-					// _pendingToWrite.put(clientSocket,arr);
+					BufferUtils bu = new BufferUtils();
 
 					_handleRead.setClientSock(clientSocket);
-					_handleRead.setReadStr(new String(arr, "ASCII"));
+					_handleRead.setReadStr(bu.bytesToStr(arr));
 					_handleRead.setSelector(_selector);
 					_handleRead.call();
 					

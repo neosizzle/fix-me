@@ -1,5 +1,6 @@
 package com.jng.callables;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -9,6 +10,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 
 import com.jng.router.RouterState;
+import com.jng.utils.BufferUtils;
 import com.jng.utils.ChecksumUtils;
 
 // TODO make read functional
@@ -38,7 +40,8 @@ public class CallableFactory {
 	
 				// assign id add socket to map
 				_routerStateRef.getBrokerMap().put(randomId, newClient);
-	
+				_routerStateRef.getRevBrokerMap().put(newClient, randomId);
+
 				// append to write list
 				String ackMsg = "Broker server accepted connection, your id is " + randomId + "\n";
 				_routerStateRef.getPendingToWriteBroker().put(newClient, ackMsg.getBytes(StandardCharsets.UTF_8));
@@ -78,13 +81,30 @@ public class CallableFactory {
 			// Method of this Class
 			public Integer call() throws Exception
 			{
-				_routerStateRef.getPendingToWriteBroker().put(clientsock, readStr.getBytes(StandardCharsets.UTF_8));
-
 				// parse and process...
+				
 				ChecksumUtils csU = new ChecksumUtils();
-				// if checksum not valid, return error to client
+				BufferUtils bU = new BufferUtils();
 
-				// if checksum is valid, get the transaction object
+				// if checksum not valid, return error to client
+				if (!csU.validateFIXChecksum(readStr))
+				{
+					String errMsg =
+					_routerStateRef.getRevBrokerMap().get(clientsock) +
+					"|ERROR=Invalid checksum|"
+					;
+					int checksumGenerated = csU.getFIXChecksum(errMsg);
+					errMsg += ("10="+checksumGenerated);
+
+					_routerStateRef.getPendingToWriteBroker().put(
+						clientsock,
+						bU.replacePipeWithSOH(bU.strToBytes(errMsg)));
+					// register client socket for write
+					clientsock.register(selector, SelectionKey.OP_WRITE);
+					return 0;
+				}
+
+				// get the transaction object
 
 				// garenteed a business transaction, find the market in lookup
 
@@ -98,6 +118,9 @@ public class CallableFactory {
 
 				// should restore if error
 				System.out.println(csU.validateFIXChecksum(readStr));
+				_routerStateRef.getPendingToWriteBroker().put(
+						clientsock,
+						bU.replacePipeWithSOH(bU.strToBytes("hello|gay")));
 
 				// register client socket for write
 				clientsock.register(selector, SelectionKey.OP_WRITE);
