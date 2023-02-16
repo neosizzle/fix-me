@@ -1,0 +1,19 @@
+
+
+newtest
+397ERROR=Invalid checksum10=156
+
+newtest
+397ERROR=Invalid checksum10=156
+
+newtest
+397ERROR=Invalid Character10=214
+
+newtest
+397ERROR=Invalid transaction10=239
+
+newtest
+397ERROR=Market not found10=115
+
+newtest
+397ERROR=For input string: "12a3"10=37
