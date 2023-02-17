@@ -1,5 +1,6 @@
 package com.jng.router;
 
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,12 +13,28 @@ public class RouterState {
 	private Map<Integer, SocketChannel> _marketMap;
 	private Map<SocketChannel, Integer> _revMarketMap;
 	private Map<SocketChannel, byte[]>  _pendingToWriteMarket;
+	private Map<SocketChannel, Selector>  _marketSelectors;
+
 	private Map<Integer, SocketChannel> _brokerMap;
 	private Map<SocketChannel, Integer> _revBrokerMap;
 	private Map<SocketChannel, byte[]>  _pendingToWriteBroker;
+	private Map<SocketChannel, Selector>  _brokerSelectors;
+
 	private ArrayList<Transaction> _pendingTransactions;
 	private Database _db;
 
+	public Map<SocketChannel, Selector> getBrokerSelectors() {
+		return _brokerSelectors;
+	}
+	public void setBrokerSelectors(Map<SocketChannel, Selector> _brokerSelectors) {
+		this._brokerSelectors = _brokerSelectors;
+	}
+	public Map<SocketChannel, Selector> getMarketSelectors() {
+		return _marketSelectors;
+	}
+	public void setMarketSelectors(Map<SocketChannel, Selector> _marketSelectors) {
+		this._marketSelectors = _marketSelectors;
+	}
 	public Map<Integer, SocketChannel> getBrokerMap() {
 		return _brokerMap;
 	}
@@ -76,5 +93,7 @@ public class RouterState {
 		_pendingTransactions = new ArrayList<Transaction>();
 		_pendingToWriteBroker = new HashMap<SocketChannel, byte[]>();
 		_pendingToWriteMarket = new HashMap<SocketChannel, byte[]>();
+		_marketSelectors = new HashMap<SocketChannel, Selector>();
+		_brokerSelectors = new HashMap<SocketChannel, Selector>();
 	}
 }

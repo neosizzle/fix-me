@@ -14,7 +14,6 @@ public class Database {
 	private Connection _connection;
 	private Statement _statement;
 
-	// TODO implement model methods
 
 	// gets max id from table
 	private int _getMaxId(String table)
@@ -66,7 +65,7 @@ public class Database {
 	}
 	
 	// add transaction to db
-	public int addTransactionToDb(Transaction transaction) throws SQLException
+	public int addTransactionToDb(Transaction transaction) throws Exception
 	{
 		String query = "INSERT INTO TRANSACTIONS (id, to_id, from_id, rawMsg, isResponse, isConfirmed, checksum) VALUES (?, ?, ?, ?, ?, ?, ?)";
 		
@@ -91,7 +90,7 @@ public class Database {
 		int id = transaction.getId();
 		if (id == -1) return;
 
-		String query = "UPDATE TRANSACTIONS SET isCompleted = 1 WHERE id = " + id;
+		String query = "UPDATE TRANSACTIONS SET isConfirmed = 1 WHERE id = " + id;
 		_statement.executeUpdate(query);
 
 	}

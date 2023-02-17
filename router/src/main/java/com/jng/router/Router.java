@@ -23,13 +23,19 @@ public class Router {
 	private IConnectCallable _handleConnectionBroker;
 	private IReadCallable _handleReadBroker;
 	private IWriteCallable _handleWriteBroker;
-
+	
+	private IConnectCallable _handleConnectionMarket;
+	private IWriteCallable _handleWriteMarket;
+	private IReadCallable _handleReadMarket;
 	/** Handlers Market */
 	
 
+	// TODO make routerlogger
 	private void _generateMarketHandlers()
 	{
-
+		_handleConnectionMarket = _callableFactory.generateMarketConnectHandler();
+		_handleWriteMarket = _callableFactory.generateMarketWriteHandler();
+		_handleReadMarket = _callableFactory.generateMarketReadHandler();
 	}
 
 	private void _generateBrokerHandlers()
@@ -54,11 +60,13 @@ public class Router {
 
 			_generateBrokerHandlers();
 			_brokerServer.setHandleConnect(_handleConnectionBroker);
-			_marketServer.setHandleConnect(_handleConnectionBroker);
 			_brokerServer.setHandleRead(_handleReadBroker);
-			_marketServer.setHandleRead(_handleReadBroker);
 			_brokerServer.setHandleWrite(_handleWriteBroker);
-			_marketServer.setHandleWrite(_handleWriteBroker);
+
+			_generateMarketHandlers();
+			_marketServer.setHandleConnect(_handleConnectionMarket);
+			_marketServer.setHandleRead(_handleReadMarket);
+			_marketServer.setHandleWrite(_handleWriteMarket);
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);

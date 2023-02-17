@@ -7,6 +7,7 @@ public class BusinessTransaction extends Transaction {
 	private double _quantity;
 	private int 	_market;
 	private double _price;
+	private boolean _isBuy;
 
 	public String getInstrument() {
 		return _instrument;
@@ -26,11 +27,17 @@ public class BusinessTransaction extends Transaction {
 	public void setMarket(int _market) {
 		this._market = _market;
 	}
-	public double get_price() {
+	public double getPrice() {
 		return _price;
 	}
-	public void set_price(double _price) {
+	public void setPrice(double _price) {
 		this._price = _price;
+	}
+	public boolean getIsBuy() {
+		return _isBuy;
+	}
+	public void setIsBuy(boolean _isBuy) {
+		this._isBuy = _isBuy;
 	}
 	public BusinessTransaction(
 		String instrument,
@@ -40,7 +47,8 @@ public class BusinessTransaction extends Transaction {
 		int toId,
 		int fromId,
 		String rawMsg,
-		int checksum
+		int checksum,
+		boolean isBuy
 		)
 	{
 		super(toId, fromId, rawMsg, false, false, checksum);
@@ -48,6 +56,7 @@ public class BusinessTransaction extends Transaction {
 		this._quantity = quantity;
 		this._market = market;
 		this._price = price;
+		this._isBuy = isBuy;
 	}
 
 	public BusinessTransaction(byte[] fixMsg) throws Exception
@@ -55,33 +64,22 @@ public class BusinessTransaction extends Transaction {
 		super(-1, -1, "", false, false, -1);
 		BufferUtils bu = new BufferUtils();
 
+		this._rawMsg = bu.bytesToStr(fixMsg);
 		String changed = bu.bytesToStr(bu.replaceSOHwithPipe(fixMsg));
-		String[] tokens = changed.split("|", -1);
-		if (tokens.length != 5) throw new Exception("Invalid transaction");
+		String[] tokens = changed.split("\\|", -1);
+		if (tokens.length != 7) throw new Exception("Invalid transaction");
 		
-		// String Pair = tokens[];
-		// String[] Tokens = Pair.split("=", -1);
-		// if (Tokens.length != 2)
-		// 	throw new Exception("Invalid transaction ()");
-		// if (Tokens[0] != "ID")
-		// 	throw new Exception("Invalid transaction ()");
-		// this._ = Integer.valueOf(Tokens[1]);
 
 		// get id
 		String idPair = tokens[0];
-		String[] idTokens = idPair.split("=", -1);
-		if (idTokens.length != 2)
-			throw new Exception("Invalid transaction (id)");
-		if (idTokens[0] != "ID")
-			throw new Exception("Invalid transaction (id)");
-		this._id = Integer.valueOf(idTokens[1]);
+		this._fromId  = Integer.valueOf(idPair);
 
 		// instrument
 		String instrumentPair = tokens[1];
 		String[] instrumentTokens = instrumentPair.split("=", -1);
 		if (instrumentTokens.length != 2)
 			throw new Exception("Invalid transaction (instrument)");
-		if (instrumentTokens[0] != "instrument")
+		if (!instrumentTokens[0].equals("instrument"))
 			throw new Exception("Invalid transaction (instrument)");
 		this._instrument = instrumentTokens[1];
 
@@ -90,25 +88,35 @@ public class BusinessTransaction extends Transaction {
 		String[] marketTokens = marketPair.split("=", -1);
 		if (marketTokens.length != 2)
 			throw new Exception("Invalid transaction (market)");
-		if (marketTokens[0] != "market")
+		if (!marketTokens[0].equals("market"))
 			throw new Exception("Invalid transaction (market)");
 		this._market = Integer.valueOf(marketTokens[1]);
+		this._toId = this._market;
 
 		// price
 		String pricePair = tokens[3];
 		String[] priceTokens = pricePair.split("=", -1);
 		if (priceTokens.length != 2)
 			throw new Exception("Invalid transaction (price)");
-		if (priceTokens[0] != "price")
+		if (!priceTokens[0].equals("price"))
 			throw new Exception("Invalid transaction (price)");
-		this._price = Integer.valueOf(priceTokens[1]);
+		this._price = Double.valueOf(priceTokens[1]);
+
+		// isBuy
+		String isBuyPair = tokens[4];
+		String[] isBuyTokens = isBuyPair.split("=", -1);
+		if (isBuyTokens.length != 2)
+			throw new Exception("Invalid transaction (isBuy)");
+		if (!isBuyTokens[0].equals("isBuy"))
+			throw new Exception("Invalid transaction (isBuy)");
+		this._isBuy = isBuyTokens[1].equals("true");
 
 		// checksum
-		String checksumPair = tokens[4];
+		String checksumPair = tokens[5];
 		String[] checksumTokens = checksumPair.split("=", -1);
 		if (checksumTokens.length != 2)
 			throw new Exception("Invalid transaction (checksum)");
-		if (checksumTokens[0] != "10")
+		if (!checksumTokens[0].equals("10"))
 			throw new Exception("Invalid transaction (checksum)");
 		this._checksum = Integer.valueOf(checksumTokens[1]);
 	}

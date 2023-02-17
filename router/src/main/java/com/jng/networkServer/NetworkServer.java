@@ -45,6 +45,9 @@ public class NetworkServer {
 	// TODO implement signal handling - scrapped, no standard API available
 
 	// TODO make disconnect handle
+	// remove from socketmap
+	// remove from rev map
+	// remove from selector
 
 	public void setHandleConnect(IConnectCallable _handleConnect) {
 		this._handleConnect = _handleConnect;
@@ -95,6 +98,7 @@ public class NetworkServer {
 
 					// run callables
 					_handleConnect.setNewClient(clientSocket);
+					_handleConnect.setSelector(_selector);
 					_handleConnect.call();
 
 					continue ;
@@ -141,7 +145,6 @@ public class NetworkServer {
 
 					_handleRead.setClientSock(clientSocket);
 					_handleRead.setReadStr(bu.bytesToStr(arr));
-					_handleRead.setSelector(_selector);
 					_handleRead.call();
 					
 
@@ -191,9 +194,9 @@ public class NetworkServer {
 		_isRunning = true;
 		_routerState = routerstate;
 		_callableFactory = new CallableFactory();
-		_handleConnect = _callableFactory.createDefaultConenctCallable();
-		_handleRead = _callableFactory.createDefaultReadCallable();
-		_handleWrite = _callableFactory.createDefaultWriteCallable();
+		_handleConnect = null;
+		_handleRead = null;
+		_handleWrite = null;
 		_connectedClients = new ArrayList<SocketChannel>();
 		_setup();
 	}

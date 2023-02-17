@@ -1,5 +1,9 @@
 package com.jng.transactions;
 
+import java.util.HashMap;
+
+import com.jng.utils.BufferUtils;
+
 public class Transaction {
 	protected int _id;
 	protected int _toId;
@@ -70,4 +74,39 @@ public class Transaction {
 		this._checksum = checksum;
 
 	}
+
+	// public Transaction(String fixMsg) throws Exception
+	// {
+	// 	String soh = String.valueOf((char) 1);
+	// 	String tokens[] = fixMsg.split(soh, _checksum);
+	// 	HashMap<String, Boolean> tokensFound = new HashMap<String, Boolean>();
+
+	// 	// populate compulsory tokens
+	// 	tokensFound.put("id", false);
+	// 	tokensFound.put("instrument", false);
+	// 	tokensFound.put("market", false);
+	// 	tokensFound.put("price", false);
+	// 	tokensFound.put("10", false);
+
+	// 	// validate compulsory tokens
+	// 	for (String token : tokens) {
+	// 		// check if token is acceptable
+	// 		if (!tokensFound.keySet().contains(token))
+	// 			throw new Exception("Invalid Token: " + token);
+
+	// 		// check if token is duplicated
+	// 		if (tokensFound.get(token))
+	// 			throw new Exception("Duplicated Token: " + token);
+
+	// 		// mark token as found
+	// 		tokensFound.put(token, true);
+	// 	}
+
+	// 	for (String token : tokensFound.keySet()) {
+	// 		if (!tokensFound.get(token))
+	// 			throw new Exception("Missing Token: " + token);
+	// 	}
+
+
+	// }
 }

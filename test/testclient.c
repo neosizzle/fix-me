@@ -211,7 +211,6 @@ char	**ft_split(char const *s, char c)
 	return (res);
 }
 
-// TODO make tester
 //Create a Socket for server communication
 short SocketCreate(void)
 {
