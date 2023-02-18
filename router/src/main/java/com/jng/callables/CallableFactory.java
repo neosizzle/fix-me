@@ -1,16 +1,14 @@
 package com.jng.callables;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
-import java.util.concurrent.Callable;
-
 import com.jng.router.RouterState;
 import com.jng.transactions.BusinessTransaction;
+import com.jng.transactions.ResponseTransaction;
 import com.jng.transactions.Transaction;
 import com.jng.utils.BufferUtils;
 import com.jng.utils.ChecksumUtils;
@@ -28,13 +26,12 @@ public class CallableFactory {
 	{
 		BufferUtils bU = new BufferUtils();
 		ChecksumUtils cU = new ChecksumUtils();
+		char soh = (char) 1;
 		String res;
 
 		res = "";
-		// TODO generate market restore message
 		if (isBroker)
 		{
-			char soh = (char) 1;
 			byte[] rawMsgBytes = bU.strToBytes(transactionToRes.getRawMsg());
 			BusinessTransaction businessTransaction = new BusinessTransaction(rawMsgBytes);
 		
@@ -45,6 +42,16 @@ public class CallableFactory {
 
 			res += "instrument=" + businessTransaction.getInstrument() + String.valueOf(soh); 
 
+			int checksum = cU.getFIXChecksum(res, false);
+			res += "10=" + checksum + String.valueOf(soh);
+		}
+		else {
+			byte[] rawMsgBytes = bU.strToBytes(transactionToRes.getRawMsg());
+			ResponseTransaction responseTransaction = new ResponseTransaction(rawMsgBytes);
+
+			res += responseTransaction.getFromId() + String.valueOf(soh);
+			res += "responseInstrument=" + responseTransaction.getInstrument() + String.valueOf(soh);
+			res += "responseAction=" + responseTransaction.getResponse() + String.valueOf(soh);
 			int checksum = cU.getFIXChecksum(res, false);
 			res += "10=" + checksum + String.valueOf(soh);
 		}
@@ -449,7 +456,7 @@ public class CallableFactory {
 			}
 			// Method of this Class
 			public Integer call()
-			{				
+			{
 				ChecksumUtils csU = new ChecksumUtils();
 				BufferUtils bU = new BufferUtils();
 
@@ -506,7 +513,128 @@ public class CallableFactory {
 						return 0;
 					}
 				}
-				
+
+				// get the response transaction object, return error if parse fails
+				ResponseTransaction newTrans;
+
+				try {
+					newTrans = new ResponseTransaction(bU.strToBytes(readStr));
+				} catch (Exception e) {
+					String errMsg = hU.generateErrMsg(
+						"|ERROR=" + e.getMessage() + "|",
+						_routerStateRef.getRevMarketMap().get(clientsock),
+						true);
+
+					// put string to client
+					hU.putStringToClient(
+						_routerStateRef.getPendingToWriteMarket(),
+						clientsock,
+						errMsg);
+					// register client socket for write
+					try {
+						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
+					} catch (Exception e2) {
+						e2.printStackTrace();
+						System.err.println(e2.getMessage());
+					}
+					return 0;
+					
+				}
+
+				// market Id is not recognigzed throw error
+				if (!_routerStateRef.getMarketMap().keySet().contains(newTrans.getFromId()))
+				{
+					String errMsg = hU.generateErrMsg(
+						"|ERROR=Market not recognized|",
+					_routerStateRef.getRevMarketMap().get(clientsock),
+					true);
+
+					// put string to client
+					hU.putStringToClient(
+						_routerStateRef.getPendingToWriteMarket(),
+						clientsock,
+						errMsg);
+
+					// register client socket for write
+					try {
+						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
+					} catch (Exception e) {
+						e.printStackTrace();
+						System.err.println(e.getMessage());
+					}
+					return 0;
+				}
+
+				// find the broker in lookup
+				SocketChannel brokerSocket = _routerStateRef.getBrokerMap().get(newTrans.getBroker());
+
+				// if not found, return error to client
+				// TEST OK
+				if (brokerSocket == null)
+				{
+						String errMsg = hU.generateErrMsg(
+						"|ERROR=Broker not found|",
+						_routerStateRef.getRevMarketMap().get(clientsock),
+						true);
+
+						// put string to client
+						hU.putStringToClient(
+							_routerStateRef.getPendingToWriteMarket(),
+							clientsock,
+							errMsg);
+						// register client socket for write
+						try {
+							clientsock.register(marketSelector, SelectionKey.OP_WRITE);
+						} catch (Exception e) {
+							e.printStackTrace();
+							System.err.println(e.getMessage());
+						}
+						return 0;
+				}
+
+				// TODO check if transaction exists and is not completed already
+
+				// mark as complete for transaction
+				try {
+					_routerStateRef.getDb().completeTransaction(newTrans);
+				} catch (Exception e) {
+					e.printStackTrace();
+					// commence restore
+					try {
+						String restoreMsg = _generateRestoreMsg(newTrans, true);
+						_routerStateRef.getPendingToWriteMarket().put(
+							clientsock,
+							bU.replacePipeWithSOH(bU.strToBytes(restoreMsg)));
+						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
+						return 1;
+					} catch (Exception e2) {
+						e2.printStackTrace();
+						return 1;
+					}
+				}
+
+				// send response to broker
+				try {
+					Selector brokerSelector = _routerStateRef.getBrokerSelectors().get(brokerSocket);
+					_routerStateRef
+					.getPendingToWriteBroker()
+					.put(brokerSocket, bU.strToBytes(readStr));
+					brokerSocket.register(brokerSelector, SelectionKey.OP_WRITE);
+				} catch (Exception e) {
+					e.printStackTrace();
+					// commence restore
+					try {
+						String restoreMsg = _generateRestoreMsg(newTrans, true);
+						_routerStateRef.getPendingToWriteMarket().put(
+							clientsock,
+							bU.replacePipeWithSOH(bU.strToBytes(restoreMsg)));
+						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
+						return 1;
+					} catch (Exception e2) {
+						e2.printStackTrace();
+						return 1;
+					}
+				}
 				return 0;
 			}
 		}
@@ -554,6 +682,8 @@ public class CallableFactory {
 				try {
 					// send message to socket
 					clientSock.write(ByteBuffer.wrap(message));
+
+					// System.out.println("written writecall.()" + new String(message, "ASCII"));
 
 					// register client socket to read again
 					clientSock.register(selector, SelectionKey.OP_READ);

@@ -1,5 +1,6 @@
 package com.jng.router;
 
+import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
@@ -14,15 +15,29 @@ public class RouterState {
 	private Map<SocketChannel, Integer> _revMarketMap;
 	private Map<SocketChannel, byte[]>  _pendingToWriteMarket;
 	private Map<SocketChannel, Selector>  _marketSelectors;
+	private Map<SocketChannel, SelectionKey>  _marketSelectorKeys; // ???
 
 	private Map<Integer, SocketChannel> _brokerMap;
 	private Map<SocketChannel, Integer> _revBrokerMap;
 	private Map<SocketChannel, byte[]>  _pendingToWriteBroker;
 	private Map<SocketChannel, Selector>  _brokerSelectors;
+	private Map<SocketChannel, SelectionKey>  _brokerSelectorKeys;
 
 	private ArrayList<Transaction> _pendingTransactions;
 	private Database _db;
 
+	public Map<SocketChannel, SelectionKey> getBrokerSelectorKeys() {
+		return _brokerSelectorKeys;
+	}
+	public void setBrokerSelectorKeys(Map<SocketChannel, SelectionKey> _brokerSelectorKeys) {
+		this._brokerSelectorKeys = _brokerSelectorKeys;
+	}
+	public Map<SocketChannel, SelectionKey> getMarketSelectorKeys() {
+		return _marketSelectorKeys;
+	}
+	public void set_marketSelectorKeys(Map<SocketChannel, SelectionKey> _marketSelectorKeys) {
+		this._marketSelectorKeys = _marketSelectorKeys;
+	}
 	public Map<SocketChannel, Selector> getBrokerSelectors() {
 		return _brokerSelectors;
 	}

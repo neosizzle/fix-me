@@ -166,6 +166,7 @@ public class App
                         }
 
                         // check for restore
+                        // TODO test restore
                         else if (tokens[1].startsWith("restore"))
                         {
                             String restoreAmount = tokens[1].split("=", -1)[1];
@@ -175,13 +176,13 @@ public class App
                             // adjust assets
                             if (restoreAction.equalsIgnoreCase("buy"))
                             {
-                               try {
+                                try {
                                 monies += Double.valueOf(restoreAmount);
                                 if (assets.keySet().contains(restoreInstrument))
                                     assets.put(restoreInstrument, assets.get(restoreInstrument) - 1);
-                               } catch (Exception e) {
+                                } catch (Exception e) {
                                 e.printStackTrace();
-                               }
+                                }
                             }
                             else
                             {
@@ -194,9 +195,33 @@ public class App
                         }
 
                         // TODO check for market response
-
+                        else if (tokens[1].startsWith("response"))
+                        {
+                            if (tokens[1].split("=", -1)[1].equals("REJECT"))
+                            {
+                                // adjust assets
+                                if (action.equalsIgnoreCase("buy"))
+                                {
+                                try {
+                                    monies += Double.valueOf(price);
+                                    if (assets.keySet().contains(instrument))
+                                        assets.put(instrument, assets.get(instrument) - 1);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                }
+                                else
+                                {
+                                    monies -= Double.valueOf(price);
+                                    if (assets.keySet().contains(instrument))
+                                        assets.put(instrument, assets.get(instrument) + 1);
+                                    else
+                                        assets.put(instrument, 1);
+                                }
+                            }
+                        }
                         // print to console
-                        System.out.println(readMsgStr);
+                        // System.out.println(readMsgStr);
                     }
 
                     // list commnd

@@ -48,6 +48,7 @@ public class NetworkServer {
 	// remove from socketmap
 	// remove from rev map
 	// remove from selector
+	// remove from selector keys
 
 	public void setHandleConnect(IConnectCallable _handleConnect) {
 		this._handleConnect = _handleConnect;
