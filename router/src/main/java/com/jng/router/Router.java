@@ -5,6 +5,7 @@ import java.util.concurrent.Executors;
 
 import com.jng.callables.CallableFactory;
 import com.jng.callables.IConnectCallable;
+import com.jng.callables.IDisconnectCallable;
 import com.jng.callables.IReadCallable;
 import com.jng.callables.IWriteCallable;
 import com.jng.database.Database;
@@ -23,28 +24,28 @@ public class Router {
 	private IConnectCallable _handleConnectionBroker;
 	private IReadCallable _handleReadBroker;
 	private IWriteCallable _handleWriteBroker;
-	
+	private IDisconnectCallable _handleDisconnectBroker;
+
+	/** Handlers Market */
 	private IConnectCallable _handleConnectionMarket;
 	private IWriteCallable _handleWriteMarket;
 	private IReadCallable _handleReadMarket;
-	/** Handlers Market */
-	
+	private IDisconnectCallable _handleDisconnectMarket;
 
-	// TODO make routerlogger
 	private void _generateMarketHandlers()
 	{
 		_handleConnectionMarket = _callableFactory.generateMarketConnectHandler();
 		_handleWriteMarket = _callableFactory.generateMarketWriteHandler();
 		_handleReadMarket = _callableFactory.generateMarketReadHandler();
+		_handleDisconnectMarket = _callableFactory.generateMarketDisconnectHandler();
 	}
 
 	private void _generateBrokerHandlers()
 	{
-
-		_handleConnectionBroker = _callableFactory.generateBrokerConenctHandler();
+		_handleConnectionBroker = _callableFactory.generateBrokerConnectHandler();
 		_handleReadBroker = _callableFactory.generateBrokerReadHandler();
 		_handleWriteBroker = _callableFactory.generateBrokerWriteHandler();
-
+		_handleDisconnectBroker = _callableFactory.generateBrokerDisconnectHandler();
 	}
 
 	/**Setup- connect to db and init sockets */
@@ -62,11 +63,14 @@ public class Router {
 			_brokerServer.setHandleConnect(_handleConnectionBroker);
 			_brokerServer.setHandleRead(_handleReadBroker);
 			_brokerServer.setHandleWrite(_handleWriteBroker);
+			_brokerServer.setHandleDisconnect(_handleDisconnectBroker);
 
 			_generateMarketHandlers();
 			_marketServer.setHandleConnect(_handleConnectionMarket);
 			_marketServer.setHandleRead(_handleReadMarket);
 			_marketServer.setHandleWrite(_handleWriteMarket);
+			_marketServer.setHandleDisconnect(_handleDisconnectMarket);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);

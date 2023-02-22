@@ -16,7 +16,6 @@ public class App
     static HashMap<String, Integer> assets = new HashMap<String, Integer>();
     static double monies = 69420;
 
-    // TODO make broker program 
     public static void main( String[] args )
     {
         try {
@@ -123,8 +122,6 @@ public class App
                         // convert pipes to soh
                         byte[] msgToSend = nU.replacePipeWithSOH(trnxLine.getBytes());
 
-                        System.out.println(nU.bytesToStr(msgToSend));
-
                         // adjust assets
                         if (action.equals("buy"))
                         {
@@ -194,11 +191,11 @@ public class App
                             }
                         }
 
-                        // TODO check for market response
                         else if (tokens[1].startsWith("response"))
                         {
                             if (tokens[1].split("=", -1)[1].equals("REJECT"))
                             {
+                                System.out.println("Transaction rejected :(");
                                 // adjust assets
                                 if (action.equalsIgnoreCase("buy"))
                                 {
@@ -219,6 +216,9 @@ public class App
                                         assets.put(instrument, 1);
                                 }
                             }
+                            else
+                                System.out.println("Transaction accepted :)");
+
                         }
                         // print to console
                         // System.out.println(readMsgStr);

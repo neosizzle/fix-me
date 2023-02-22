@@ -16,8 +16,10 @@ import javax.swing.Icon;
 
 import com.jng.callables.CallableFactory;
 import com.jng.callables.IConnectCallable;
+import com.jng.callables.IDisconnectCallable;
 import com.jng.callables.IReadCallable;
 import com.jng.callables.IWriteCallable;
+import com.jng.router.RouterLogger;
 import com.jng.router.RouterState;
 import com.jng.utils.BufferUtils;
 
@@ -35,20 +37,14 @@ public class NetworkServer {
 	// private Map<SocketChannel, byte[]> _pendingToWrite = new HashMap<SocketChannel, byte[]>();
 	private final int TIMEOUT = 500;
 	private ArrayList<SocketChannel> _connectedClients;
+	private RouterLogger _routerLogger;
 	
 	// business logic
-	private RouterState _routerState;
-	private CallableFactory _callableFactory;
 	private IConnectCallable _handleConnect;
 	private IReadCallable _handleRead;
 	private IWriteCallable _handleWrite;
+	private IDisconnectCallable _handleDisconnect;
 	// TODO implement signal handling - scrapped, no standard API available
-
-	// TODO make disconnect handle
-	// remove from socketmap
-	// remove from rev map
-	// remove from selector
-	// remove from selector keys
 
 	public void setHandleConnect(IConnectCallable _handleConnect) {
 		this._handleConnect = _handleConnect;
@@ -62,9 +58,13 @@ public class NetworkServer {
 		this._handleWrite = _handleWrite;
 	}
 
+	public void setHandleDisconnect(IDisconnectCallable _handleDisconnect) {
+		this._handleDisconnect = _handleDisconnect;
+	}
+
 	public void start() throws Exception
 	{
-		System.out.println("Server starting at " + _host + ":" + _port);
+		_routerLogger.logInfo("Server starting at " + _host + ":" + _port);
 		while (_isRunning) {
 			// wait for select to return
 			_selector.select(TIMEOUT);
@@ -128,10 +128,11 @@ public class NetworkServer {
 					}
 
 					if (read == -1) {
-						System.out.println("Client disconnect");
-						
 						// remove from connected clients
 						_connectedClients.remove(clientSocket);
+
+						_handleDisconnect.setClientToDc(clientSocket);
+						_handleDisconnect.call();
 
 						clientSocket.close();
 						key.cancel();
@@ -193,12 +194,11 @@ public class NetworkServer {
 		_host = host;
 		_port = port;
 		_isRunning = true;
-		_routerState = routerstate;
-		_callableFactory = new CallableFactory();
 		_handleConnect = null;
 		_handleRead = null;
 		_handleWrite = null;
 		_connectedClients = new ArrayList<SocketChannel>();
+		_routerLogger = new RouterLogger();
 		_setup();
 	}
 }

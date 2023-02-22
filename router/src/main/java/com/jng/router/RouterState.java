@@ -110,5 +110,7 @@ public class RouterState {
 		_pendingToWriteMarket = new HashMap<SocketChannel, byte[]>();
 		_marketSelectors = new HashMap<SocketChannel, Selector>();
 		_brokerSelectors = new HashMap<SocketChannel, Selector>();
+		_brokerSelectorKeys = new HashMap<SocketChannel, SelectionKey>();
+		_marketSelectorKeys = new HashMap<SocketChannel, SelectionKey>();
 	}
 }

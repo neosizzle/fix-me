@@ -21,6 +21,9 @@ public class App
             InetSocketAddress myAddress  =
                 new InetSocketAddress("localhost", PORT);
             SocketChannel myClient = SocketChannel.open();
+
+            // dev add test instrument to asset
+            assets.put("gay", 1);
             
             // connect to server
             myClient.connect(myAddress);
@@ -36,8 +39,6 @@ public class App
                 // read response from server
                 byte[] readMsg = nU.readFromSocket(myClient);
                 String readMsgStr = new String(readMsg, "ASCII");
-
-                System.out.println("read message" + readMsgStr);
 
                 // tokenize response
                 String[] tokens = readMsgStr.split(String.valueOf((char) 1), -1);
@@ -82,7 +83,6 @@ public class App
                 }
             
 
-                // TODO check for business transaction
                 else
                 {
                     String brokerId = tokens[0];
@@ -95,6 +95,7 @@ public class App
                     // adjust asset
                     if (requestedIsBuy.equals("true"))
                     {
+                        System.out.println("Buy reuqest from " + brokerId + " for " + requestedInstrument);
                         if (assets.keySet().contains(requestedInstrument) &&
                             assets.get(requestedInstrument) > 0)
                         {
@@ -106,6 +107,7 @@ public class App
                     {
                         isAccept = true;
 
+                        System.out.println("Sell reuqest from " + brokerId + " for " + requestedInstrument);
                         if (assets.keySet().contains(requestedInstrument))
                             assets.put(requestedInstrument, assets.get(requestedInstrument) + 1);
                         else
@@ -127,7 +129,10 @@ public class App
 
                     // convert pipes to soh
                     byte[] msgToSend = nU.replacePipeWithSOH(responseLine.getBytes());
-                    System.out.println(nU.bytesToStr(msgToSend));
+                    if (isAccept)
+                        System.out.println("Accepting request...");
+                    else
+                        System.out.println("Rejecting request...");
 
                     // send data to server
                     myClient.write(ByteBuffer.wrap(msgToSend));
@@ -136,7 +141,7 @@ public class App
             }
 
         } catch (Exception e) {
-            // TODO: handle exception
+            e.printStackTrace();
         }
     }
 }

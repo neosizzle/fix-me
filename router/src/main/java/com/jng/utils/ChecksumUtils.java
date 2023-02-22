@@ -43,7 +43,6 @@ public class ChecksumUtils {
 			return false;
 
 		try {
-			System.out.println("correct - " + getFIXChecksum(message, false) + " == " + Integer.valueOf(checksumTokens[1].trim()));
 			return getFIXChecksum(message, false) == Integer.valueOf(checksumTokens[1].trim());
 		} catch (Exception e) {
 			return getFIXChecksum(message, false) == -1;

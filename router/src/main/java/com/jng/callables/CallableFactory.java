@@ -6,6 +6,8 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+
+import com.jng.router.RouterLogger;
 import com.jng.router.RouterState;
 import com.jng.transactions.BusinessTransaction;
 import com.jng.transactions.ResponseTransaction;
@@ -17,6 +19,7 @@ import com.jng.utils.HandlerUtils;
 public class CallableFactory {
 
 	public RouterState _routerStateRef;
+	public RouterLogger _routerLogger = new RouterLogger();
 
 	public void setRouterStateRef(RouterState _routerStateRef) {
 		this._routerStateRef = _routerStateRef;
@@ -58,7 +61,7 @@ public class CallableFactory {
 		return res;
 	}
 
-	public IConnectCallable generateBrokerConenctHandler()
+	public IConnectCallable generateBrokerConnectHandler()
 	{
 		class ConnectionHandler implements IConnectCallable {
 			SocketChannel newClient = null;
@@ -94,6 +97,8 @@ public class CallableFactory {
 			{
 				int randomId = new Random().nextInt((1000 - 0) + 1);
 	
+				_routerLogger.logDebug("New broker connected, giving id " + randomId);
+
 				// assign id add socket to map
 				_routerStateRef.getBrokerMap().put(randomId, newClient);
 				_routerStateRef.getRevBrokerMap().put(newClient, randomId);
@@ -158,7 +163,7 @@ public class CallableFactory {
 						clientsock.register(brokerSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e) {
 						e.printStackTrace();
-						System.err.println(e.getMessage());
+						_routerLogger.logErr(e.getMessage());
 					}
 					return 0;
 				}
@@ -184,7 +189,7 @@ public class CallableFactory {
 								clientsock.register(brokerSelector, SelectionKey.OP_WRITE);
 							} catch (Exception e) {
 								e.printStackTrace();
-								System.err.println(e.getMessage());
+								_routerLogger.logErr(e.getMessage());
 							}
 						return 0;
 					}
@@ -212,7 +217,7 @@ public class CallableFactory {
 						clientsock.register(brokerSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e2) {
 						e2.printStackTrace();
-						System.err.println(e2.getMessage());
+						_routerLogger.logErr(e2.getMessage());
 					}
 					return 0;
 				}
@@ -236,7 +241,7 @@ public class CallableFactory {
 						clientsock.register(brokerSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e) {
 						e.printStackTrace();
-						System.err.println(e.getMessage());
+						_routerLogger.logErr(e.getMessage());
 					}
 					return 0;
 				}
@@ -263,7 +268,7 @@ public class CallableFactory {
 							clientsock.register(brokerSelector, SelectionKey.OP_WRITE);
 						} catch (Exception e) {
 							e.printStackTrace();
-							System.err.println(e.getMessage());
+							_routerLogger.logErr(e.getMessage());
 						}
 						return 0;
 				}
@@ -284,6 +289,7 @@ public class CallableFactory {
 						return 1;
 					} catch (Exception e2) {
 						e2.printStackTrace();
+						_routerLogger.logErr(e2.getMessage());
 						return 1;
 					}
 				}
@@ -317,7 +323,7 @@ public class CallableFactory {
 						clientsock.register(brokerSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e2) {
 						e2.printStackTrace();
-						System.err.println(e2.getMessage());
+						_routerLogger.logErr(e2.getMessage());
 					}
 				}
 				return 0;
@@ -384,6 +390,38 @@ public class CallableFactory {
 		return new WriteHandler();
 	}
 
+	public IDisconnectCallable generateBrokerDisconnectHandler()
+	{
+		class DisconnectHandler implements IDisconnectCallable {
+			SocketChannel clientToDc = null;
+
+			@Override
+			public void setClientToDc(SocketChannel clientToDc) {
+				this.clientToDc = clientToDc;
+			}
+			@Override
+			public Integer call() throws Exception {
+				int brokerId = _routerStateRef.getRevBrokerMap().get(clientToDc);
+
+				_routerLogger.logDebug("Broker " + brokerId + " disconnected from router.");
+				// remove from socketmap
+				_routerStateRef.getBrokerMap().remove(brokerId);
+
+				// remove from rev map
+				_routerStateRef.getRevBrokerMap().remove(clientToDc);
+
+				// remove from selector
+				_routerStateRef.getBrokerSelectors().remove(clientToDc);
+
+				// remove from selector keys
+				_routerStateRef.getBrokerSelectorKeys().remove(clientToDc);
+				return null;
+			}
+		}
+
+		return new DisconnectHandler();
+	}
+
 	public IConnectCallable generateMarketConnectHandler()
 	{
 		class ConnectionHandler implements IConnectCallable {
@@ -420,6 +458,7 @@ public class CallableFactory {
 			{
 				int randomId = new Random().nextInt((1000 - 0) + 1);
 	
+				_routerLogger.logDebug("New market connected, giving id " + randomId);
 				// assign id add socket to map
 				_routerStateRef.getMarketMap().put(randomId, newClient);
 				_routerStateRef.getRevMarketMap().put(newClient, randomId);
@@ -482,7 +521,7 @@ public class CallableFactory {
 						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e) {
 						e.printStackTrace();
-						System.err.println(e.getMessage());
+						_routerLogger.logErr(e.getMessage());
 					}
 					return 0;
 				}
@@ -508,7 +547,7 @@ public class CallableFactory {
 								clientsock.register(marketSelector, SelectionKey.OP_WRITE);
 							} catch (Exception e) {
 								e.printStackTrace();
-								System.err.println(e.getMessage());
+								_routerLogger.logErr(e.getMessage());
 							}
 						return 0;
 					}
@@ -535,7 +574,7 @@ public class CallableFactory {
 						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e2) {
 						e2.printStackTrace();
-						System.err.println(e2.getMessage());
+						_routerLogger.logErr(e2.getMessage());
 					}
 					return 0;
 					
@@ -560,7 +599,7 @@ public class CallableFactory {
 						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
 					} catch (Exception e) {
 						e.printStackTrace();
-						System.err.println(e.getMessage());
+						_routerLogger.logErr(e.getMessage());
 					}
 					return 0;
 				}
@@ -587,7 +626,7 @@ public class CallableFactory {
 							clientsock.register(marketSelector, SelectionKey.OP_WRITE);
 						} catch (Exception e) {
 							e.printStackTrace();
-							System.err.println(e.getMessage());
+							_routerLogger.logErr(e.getMessage());
 						}
 						return 0;
 				}
@@ -608,6 +647,7 @@ public class CallableFactory {
 						clientsock.register(marketSelector, SelectionKey.OP_WRITE);
 						return 1;
 					} catch (Exception e2) {
+						_routerLogger.logErr(e2.getMessage());
 						e2.printStackTrace();
 						return 1;
 					}
@@ -632,6 +672,7 @@ public class CallableFactory {
 						return 1;
 					} catch (Exception e2) {
 						e2.printStackTrace();
+						_routerLogger.logErr(e2.getMessage());
 						return 1;
 					}
 				}
@@ -700,5 +741,36 @@ public class CallableFactory {
 		return new WriteHandler();
 	}
 
+	public IDisconnectCallable generateMarketDisconnectHandler()
+	{
+		class DisconnectHandler implements IDisconnectCallable {
+			SocketChannel clientToDc = null;
+
+			@Override
+			public void setClientToDc(SocketChannel clientToDc) {
+				this.clientToDc = clientToDc;
+			}
+			@Override
+			public Integer call() throws Exception {
+				int marketId = _routerStateRef.getRevMarketMap().get(clientToDc);
+
+				_routerLogger.logDebug("Market " + marketId + " disconnected from router.");
+				// remove from socketmap
+				_routerStateRef.getMarketMap().remove(marketId);
+
+				// remove from rev map
+				_routerStateRef.getRevMarketMap().remove(clientToDc);
+
+				// remove from selector
+				_routerStateRef.getMarketSelectors().remove(clientToDc);
+
+				// remove from selector keys
+				_routerStateRef.getMarketSelectorKeys().remove(clientToDc);
+				return null;
+			}
+		}
+
+		return new DisconnectHandler();
+	}
 	
 }
