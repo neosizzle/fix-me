@@ -1,33 +1,47 @@
 package com.jng;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 
-/**
- * Hello world!
- *
- */
 public class App 
 {
     static NetUtils nU = new NetUtils();
     static HashMap<String, Integer> assets = new HashMap<String, Integer>();
+    // no timeout on market since we want to block
 
     public static void main( String[] args )
     {
+        // read init assets
+        try {
+            if (args.length != 1)
+            {
+                System.out.println("need to provide initial asset file");
+                return ;
+            }
+            readInitAssets(args[0]);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return ;
+        }
+
         try {
             final int PORT = 5001;
             InetSocketAddress myAddress  =
                 new InetSocketAddress("localhost", PORT);
             SocketChannel myClient = SocketChannel.open();
 
-            // dev add test instrument to asset
-            assets.put("gay", 1);
-            
             // connect to server
             myClient.connect(myAddress);
             
+            // finishconn
+            myClient.finishConnect();
+
             // read data
             byte[] serverConnectMsg = nU.readFromSocket(myClient);
             String serverConnectMsgStr = new String(serverConnectMsg, "ASCII");
@@ -36,6 +50,7 @@ public class App
             System.out.println("my market id is " + Id);
 
             while (true) {
+                // will block here intentionally
                 // read response from server
                 byte[] readMsg = nU.readFromSocket(myClient);
                 String readMsgStr = new String(readMsg, "ASCII");
@@ -59,7 +74,6 @@ public class App
                 }
 
                 // check for restore
-                // TODO test restore
                 if (tokens[1].startsWith("restore"))
                 {
                     String restoreIsntrument = tokens[1].split("=", -1)[1];
@@ -91,6 +105,7 @@ public class App
                     String trnxId = tokens[5].split("=", -1)[1];
                     String responseLine = "";
                     boolean isAccept = false;
+                    String requestedPrice = tokens[3].split("=", -1)[1];
 
                     // adjust asset
                     if (requestedIsBuy.equals("true"))
@@ -119,7 +134,9 @@ public class App
                     "response=" + (isAccept ? "ACCEPT" : "REJECT") + "|" +
                     "broker=" + brokerId + "|" +
                     "trnx=" + trnxId + "|" +
-                    "instrument=" + requestedInstrument + "|";
+                    "instrument=" + requestedInstrument + "|" + 
+                    "isBuy=" + requestedIsBuy  + "|" + 
+                    "price=" + requestedPrice + "|";               
 
                     int checksum = nU.getFIXChecksum(
                             nU.bytesToStr(
@@ -142,6 +159,18 @@ public class App
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // reads from asset file and push it to assets
+    private static void readInitAssets(String filename) throws FileNotFoundException, IOException {
+        try(BufferedReader br = new BufferedReader(new FileReader(filename))) {
+            for(String line; (line = br.readLine()) != null; ) {
+                String tokens[] = line.split(" " , -1);
+                String assetname = tokens[0];
+                int assetCount = Integer.valueOf(tokens[1]);
+                assets.put(assetname, assetCount);
+            }
         }
     }
 }

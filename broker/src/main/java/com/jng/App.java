@@ -2,19 +2,22 @@ package com.jng;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
+import java.util.Iterator;
 
-
-/**
- * Hello world!
- *
- */
+// TODO implement selector for read
 public class App 
 {
     static NetUtils nU = new NetUtils();
     static HashMap<String, Integer> assets = new HashMap<String, Integer>();
     static double monies = 69420;
+    static Selector _selector;
+    // timeout works partially, subject to tell me to handle perfect timeout so :|
+    // does not cascade responses
+    static int TIMEOUT = 10000;
 
     public static void main( String[] args )
     {
@@ -23,9 +26,70 @@ public class App
             InetSocketAddress myAddress  =
                 new InetSocketAddress("localhost", PORT);
             SocketChannel myClient = SocketChannel.open();
+            myClient.configureBlocking(false);
+            
+            // init select
+            _selector = Selector.open();
+
+            // set client to connect
+            myClient.register(_selector, SelectionKey.OP_CONNECT);
+
+            // wait for select to return
+            _selector.select(TIMEOUT);
+
+            // catch connect timeout
+            Iterator<SelectionKey> keys = _selector.selectedKeys().iterator();
+            if (!keys.hasNext())
+            {
+                System.err.println("Connection timeout");
+                return ;
+            }
+
+            SelectionKey selectionKey = keys.next();
+            keys.remove();
+
+            if (!selectionKey.isValid()){
+                System.err.println("Server disconnected");
+                return ;
+            }
+            if (!selectionKey.isConnectable())
+            {
+                System.err.println("Connection failure");
+                return ;   
+            }
             
             // connect to server
             myClient.connect(myAddress);
+
+            // finishconn
+            myClient.finishConnect();
+                            
+            // set client to read
+            myClient.register(_selector, SelectionKey.OP_READ);          
+
+            // wait for select to return
+            _selector.select(TIMEOUT);
+
+            // catch read timeout
+            keys = _selector.selectedKeys().iterator();
+            if (!keys.hasNext())
+            {
+                System.err.println("Read timeout");
+                return ;
+            }
+
+            selectionKey = keys.next();
+            keys.remove();
+
+            if (!selectionKey.isValid()){
+                System.err.println("Server disconnected");
+                return ;
+            }
+            if (!selectionKey.isReadable())
+            {
+                System.err.println("Unable to read data from server");
+                return ;
+            }
 
             // read data
             byte[] serverConnectMsg = nU.readFromSocket(myClient);
@@ -138,8 +202,62 @@ public class App
                                 assets.put(instrument, assets.get(instrument) - 1);
                         }
 
+                        // set client to write
+                        myClient.register(_selector, SelectionKey.OP_WRITE);          
+
+                        // wait for select to return
+                        _selector.select(TIMEOUT);
+
+                        // catch write timeout
+                        keys = _selector.selectedKeys().iterator();
+                        if (!keys.hasNext())
+                        {
+                            System.err.println("Write timeout");
+                            continue ;
+                        }
+
+                        selectionKey = keys.next();
+                        keys.remove();
+
+                        if (!selectionKey.isValid()){
+                            System.err.println("Server disconnected");
+                            return ;
+                        }
+                        if (!selectionKey.isWritable())
+                        {
+                            System.err.println("Unable to Write data to server");
+                            continue ;
+                        }
+
                         // send data to server
                         myClient.write(ByteBuffer.wrap(msgToSend));
+
+                        // set client to read
+                        myClient.register(_selector, SelectionKey.OP_READ);          
+
+                        // wait for select to return
+                        _selector.select(TIMEOUT);
+
+                        // catch read timeout
+                        keys = _selector.selectedKeys().iterator();
+                        if (!keys.hasNext())
+                        {
+                            System.err.println("Read timeout");
+                            continue ;
+                        }
+
+                        selectionKey = keys.next();
+                        keys.remove();
+
+                        if (!selectionKey.isValid()){
+                            System.err.println("Server disconnected");
+                            return ;
+                        }
+                        if (!selectionKey.isReadable())
+                        {
+                            System.err.println("Unable to read data from server");
+                            continue ;
+                        }
 
                         // read response from server
                         byte[] readMsg = nU.readFromSocket(myClient);
@@ -159,11 +277,31 @@ public class App
                         if (tokens[1].startsWith("ERROR"))
                         {
                             String errMsg = tokens[1].split("=", -1)[1];
+                            
                             System.err.println("Error from router: " + errMsg);
+
+                            // adjust assets
+                            if (action.equalsIgnoreCase("buy"))
+                            {
+                                try {
+                                monies += price;
+                                if (assets.keySet().contains(instrument))
+                                    assets.put(instrument, assets.get(instrument) - 1);
+                                } catch (Exception e) {
+                                e.printStackTrace();
+                                }
+                            }
+                            else
+                            {
+                                monies -= price;
+                                if (assets.keySet().contains(instrument))
+                                    assets.put(instrument, assets.get(instrument) + 1);
+                                else
+                                    assets.put(instrument, 1);
+                            }
                         }
 
                         // check for restore
-                        // TODO test restore
                         else if (tokens[1].startsWith("restore"))
                         {
                             String restoreAmount = tokens[1].split("=", -1)[1];
@@ -193,31 +331,35 @@ public class App
 
                         else if (tokens[1].startsWith("response"))
                         {
+                            String instrumentResponse = tokens[4].split("=", -1)[1];
+                            String isBuyResponse = tokens[5].split("=", -1)[1];
+                            String priceResponse = tokens[6].split("=", -1)[1];
+
                             if (tokens[1].split("=", -1)[1].equals("REJECT"))
                             {
-                                System.out.println("Transaction rejected :(");
+                                System.out.println("Transaction rejected for " + instrumentResponse + " at price " + priceResponse);
                                 // adjust assets
-                                if (action.equalsIgnoreCase("buy"))
+                                if (isBuyResponse.equalsIgnoreCase("true"))
                                 {
                                 try {
-                                    monies += Double.valueOf(price);
-                                    if (assets.keySet().contains(instrument))
-                                        assets.put(instrument, assets.get(instrument) - 1);
+                                    monies += Double.valueOf(priceResponse);
+                                    if (assets.keySet().contains(instrumentResponse))
+                                        assets.put(instrumentResponse, assets.get(instrumentResponse) - 1);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
                                 }
                                 else
                                 {
-                                    monies -= Double.valueOf(price);
-                                    if (assets.keySet().contains(instrument))
-                                        assets.put(instrument, assets.get(instrument) + 1);
+                                    monies -= Double.valueOf(Double.valueOf(priceResponse));
+                                    if (assets.keySet().contains(instrumentResponse))
+                                        assets.put(instrumentResponse, assets.get(instrumentResponse) + 1);
                                     else
-                                        assets.put(instrument, 1);
+                                        assets.put(instrumentResponse, 1);
                                 }
                             }
                             else
-                                System.out.println("Transaction accepted :)");
+                                System.out.println("Transaction accepted for " + instrumentResponse + " at price " + priceResponse);
 
                         }
                         // print to console
@@ -244,10 +386,7 @@ public class App
                     }
 
                     else
-                    {
-                        assets.put("sex", 123);
                         System.out.println("8=====D");
-                    }
 
                 } catch (Exception e) {
                     e.printStackTrace();

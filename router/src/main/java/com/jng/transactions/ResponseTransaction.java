@@ -7,7 +7,23 @@ public class ResponseTransaction extends Transaction {
 	private String _instrument;
 	private int _trxnId;
 	private int _broker;
+	private boolean _isBuy;
+	private double _price;
 
+	public boolean getIsBuy()
+	{
+		return _isBuy;
+	}
+	public void setIsBuy(boolean isbuy)
+	{
+		_isBuy = isbuy;
+	}
+	public double getPrice() {
+		return _price;
+	}
+	public void setPrice(double _price) {
+		this._price = _price;
+	}
 	public String getInstrument() {
 		return _instrument;
 	}
@@ -57,7 +73,7 @@ public class ResponseTransaction extends Transaction {
 		this._rawMsg = bu.bytesToStr(fixMsg);
 		String rawMsgStr =  bu.bytesToStr(fixMsg);
 		String[] tokens = rawMsgStr.split(String.valueOf((char) 1), -1);
-		if (tokens.length != 7) throw new Exception("Invalid transaction");
+		if (tokens.length != 9) throw new Exception("Invalid transaction");
 
 		// get id
 		String idPair = tokens[0];
@@ -93,6 +109,7 @@ public class ResponseTransaction extends Transaction {
 			throw new Exception("Invalid transaction (trnx)");
 		this._trxnId = Integer.valueOf(trnxTokens[1]);
 
+		// instrument
 		String instrumentPair = tokens[4];
 		String[] instrument = instrumentPair.split("=", -1);
 		if (instrument.length != 2)
@@ -101,8 +118,26 @@ public class ResponseTransaction extends Transaction {
 			throw new Exception("Invalid transaction (instrument)");
 		this._instrument = instrument[1];
 
+		// isbuy
+		String isBuyPair = tokens[5];
+		String[] isBuy = isBuyPair.split("=", -1);
+		if (isBuy.length != 2)
+			throw new Exception("Invalid transaction (isbuy)");
+		if (!isBuy[0].equals("isBuy"))
+			throw new Exception("Invalid transaction (isbuy)");
+		this._isBuy = isBuy[1].equals("true");
+
+		// price
+		String pricePair = tokens[6];
+		String[] price = pricePair.split("=", -1);
+		if (price.length != 2)
+			throw new Exception("Invalid transaction (price)");
+		if (!price[0].equals("price"))
+			throw new Exception("Invalid transaction (price)");
+		this._price = Double.valueOf(price[1]);
+
 		// checksum
-		String checksumPair = tokens[5];
+		String checksumPair = tokens[7];
 		String[] checksumTokens = checksumPair.split("=", -1);
 		if (checksumTokens.length != 2)
 			throw new Exception("Invalid transaction (checksum)");

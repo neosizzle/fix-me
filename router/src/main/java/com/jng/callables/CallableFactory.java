@@ -631,7 +631,7 @@ public class CallableFactory {
 						return 0;
 				}
 
-				// TODO check if transaction exists and is not completed already
+				// TODO check if transaction exists and is not completed already - DROPPED (i dont wanna look cool)
 
 				// mark as complete for transaction
 				try {
