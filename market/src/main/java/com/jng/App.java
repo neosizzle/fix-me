@@ -76,6 +76,8 @@ public class App
                 // check for restore
                 if (tokens[1].startsWith("restore"))
                 {
+                    System.err.println("Transaction restored from router request.");
+                    
                     String restoreIsntrument = tokens[1].split("=", -1)[1];
                     String restoreResponse = tokens[2].split("=", -1)[1];
 

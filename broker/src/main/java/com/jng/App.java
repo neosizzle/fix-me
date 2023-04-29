@@ -8,7 +8,6 @@ import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 
-// TODO implement selector for read
 public class App 
 {
     static NetUtils nU = new NetUtils();
@@ -154,8 +153,8 @@ public class App
                                 break;
                         }
 
-                        // validate price < monies
-                        if (price > monies)
+                        // validate price < monies and action is buy
+                        if ((price > monies))
                         {
                             System.out.println("You do not have enough funds");
                             continue ;
@@ -304,6 +303,8 @@ public class App
                         // check for restore
                         else if (tokens[1].startsWith("restore"))
                         {
+                            System.err.println("Transaction restored from router request.");
+
                             String restoreAmount = tokens[1].split("=", -1)[1];
                             String restoreAction = tokens[2].split("=", -1)[1];
                             String restoreInstrument = tokens[3].split("=", -1)[1];
@@ -314,7 +315,13 @@ public class App
                                 try {
                                 monies += Double.valueOf(restoreAmount);
                                 if (assets.keySet().contains(restoreInstrument))
-                                    assets.put(restoreInstrument, assets.get(restoreInstrument) - 1);
+                                {
+                                    // remove asset if quantity is zero
+                                    if (assets.get(restoreInstrument) - 1 == 0)
+                                        assets.remove(restoreInstrument);
+                                    else
+                                        assets.put(restoreInstrument, assets.get(restoreInstrument) - 1);
+                                }
                                 } catch (Exception e) {
                                 e.printStackTrace();
                                 }
