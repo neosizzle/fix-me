@@ -1,5 +1,7 @@
 package com.jng;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -94,14 +96,24 @@ public class App
             byte[] serverConnectMsg = nU.readFromSocket(myClient);
             String serverConnectMsgStr = new String(serverConnectMsg, "ASCII");
             String Id = serverConnectMsgStr.split(" ", -1)[serverConnectMsgStr.split(" ", -1).length - 1];
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
             Id =  Id.substring(0, Id.length() - 1);   
             System.out.println("my broker id is " + Id);
             System.out.println("use 'help' to get commands");
 
             while (true) {
                 try {
+                    
                     // read line
-                    String line = System.console().readLine(">");
+                    System.out.print(">");
+                    String line = in.readLine();
+
+                    // EOF
+                    if (line == null)
+                    {
+                        System.out.println("End");
+                        return ;
+                    }
 
                     // help command
                     if (line.equals("help"))
@@ -121,10 +133,12 @@ public class App
                     else if (line.equalsIgnoreCase("trnx"))
                     {
                         // input instrument
-                        String instrument = System.console().readLine("instrument:");
+                        System.out.print("instrument:");
+                        String instrument = in.readLine();
 
                         // input marketid
-                        String marketId = System.console().readLine("marketId:");
+                        System.out.print("marketId:");
+                        String marketId = in.readLine();
 
                         // input price
                         Boolean isValidPrice;
@@ -132,7 +146,8 @@ public class App
                         Double price = 0.0;
 
                         while (!isValidPrice) {
-                            String pricestr = System.console().readLine("price:");
+                            System.out.print("price:");
+                            String pricestr = in.readLine();
                             
                             try {
                                 price = Double.valueOf(pricestr);
@@ -148,7 +163,8 @@ public class App
                         String action = "";
 
                         while (!isValidAction) {
-                            action = System.console().readLine("action (buy/sell):");
+                            System.out.print("action (buy/sell):");
+                            action = in.readLine();
                             if (action.equalsIgnoreCase("buy") || action.equalsIgnoreCase("sell"))
                                 break;
                         }

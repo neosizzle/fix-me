@@ -95,7 +95,7 @@ public class CallableFactory {
 	
 			public Integer call() throws Exception
 			{
-				int randomId = new Random().nextInt((1000 - 0) + 1);
+				int randomId = new Random().nextInt((9999 - 0) + 1);
 	
 				_routerLogger.logDebug("New broker connected, giving id " + randomId);
 
@@ -456,7 +456,7 @@ public class CallableFactory {
 
 			public Integer call() throws Exception
 			{
-				int randomId = new Random().nextInt((1000 - 0) + 1);
+				int randomId = new Random().nextInt((9999 - 0) + 1);
 	
 				_routerLogger.logDebug("New market connected, giving id " + randomId);
 				// assign id add socket to map
