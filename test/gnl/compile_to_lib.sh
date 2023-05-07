@@ -1,1 +1,0 @@
-gcc -c get_next_line.c get_next_line_utils.c -I.  && ar rc libgnl.a *.o 
