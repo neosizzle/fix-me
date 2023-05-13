@@ -10,6 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 
+// TODO timeout in mac selector
 public class App 
 {
     static NetUtils nU = new NetUtils();
@@ -395,7 +396,8 @@ public class App
                         System.out.println("Asset           Quantity");
                         for (String key : assets.keySet()) {
                             int value = assets.get(key);
-                            System.out.println(key + "          " + value);
+                            if (value > 0)
+                                System.out.println(key + "          " + value);
                         }
                         if (assets.keySet().isEmpty())
                             System.out.println("-          -");
