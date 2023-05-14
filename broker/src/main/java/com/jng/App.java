@@ -10,7 +10,6 @@ import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 
-// TODO timeout in mac selector
 public class App 
 {
     static NetUtils nU = new NetUtils();
@@ -28,37 +27,41 @@ public class App
             InetSocketAddress myAddress  =
                 new InetSocketAddress("localhost", PORT);
             SocketChannel myClient = SocketChannel.open();
+            Iterator<SelectionKey> keys;
+            SelectionKey selectionKey;
+
             myClient.configureBlocking(false);
             
-            // init select
-            _selector = Selector.open();
+            // MAC timesout of selector opconnect
+            // // init select
+            // _selector = Selector.open();
 
-            // set client to connect
-            myClient.register(_selector, SelectionKey.OP_CONNECT);
+            // // set client to connect
+            // myClient.register(_selector, SelectionKey.OP_CONNECT);
 
-            // wait for select to return
-            _selector.select(TIMEOUT);
+            // // wait for select to return
+            // _selector.select(TIMEOUT);
 
-            // catch connect timeout
-            Iterator<SelectionKey> keys = _selector.selectedKeys().iterator();
-            if (!keys.hasNext())
-            {
-                System.err.println("Connection timeout");
-                return ;
-            }
+            // // catch connect timeout
+            // keys = _selector.selectedKeys().iterator();
+            // if (!keys.hasNext())
+            // {
+            //     System.err.println("Connection timeout");
+            //     return ;
+            // }
 
-            SelectionKey selectionKey = keys.next();
-            keys.remove();
+            // selectionKey = keys.next();
+            // keys.remove();
 
-            if (!selectionKey.isValid()){
-                System.err.println("Server disconnected");
-                return ;
-            }
-            if (!selectionKey.isConnectable())
-            {
-                System.err.println("Connection failure");
-                return ;   
-            }
+            // if (!selectionKey.isValid()){
+            //     System.err.println("Server disconnected");
+            //     return ;
+            // }
+            // if (!selectionKey.isConnectable())
+            // {
+            //     System.err.println("Connection failure");
+            //     return ;   
+            // }
             
             // connect to server
             myClient.connect(myAddress);
